@@ -1,4 +1,17 @@
 {
-    "calendarID":"",
-    "apiKey":""
+    
+    "apiKey":"",
+    "holidayCalID":"ko.south_korea%23holiday%40group.v.calendar.google.com",
+    "filters": {
+        "teams":["기술팀", "연구소"],
+        "memebers": [
+            ["홍길동","김철수"],
+            ["이유택","김영희"]
+        ],
+        "calendarID":[
+            "",
+            ""
+        ]
+    }
+
 }

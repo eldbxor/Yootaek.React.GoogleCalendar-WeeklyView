@@ -11,35 +11,95 @@ const useStyles = makeStyles((theme) => ({
     textDecoration: "underline",
     fontWeight: "bold",
     color: "#000000",
-    marginTop: 20,
-    marginLeft: 20,
+    textAlign: "center",
+    // marginTop: 20,
+    // marginLeft: 20,
   },
-  emptySpace: {
+  emptySpace5: {
     height: "5px",
   },
+  emptySpace10: {
+    height: "10px",
+  },
+  emptySpace20: {
+    height: "20px",
+  },
 }));
+
 function scheduleReducer(schedule, action) {
   switch (action.type) {
     case "REPLACE":
-      console.log(action.member);
-      console.log(action.schedule);
-      let newSchedule = action.schedule.filter((item) => {
+      let startDate = new Date(action.start);
+      let newSchedule = [];
+
+      let nameFilter = action.schedule.filter((item) => {
         return item.summary.includes(action.member);
       });
-      console.log(newSchedule);
+
+      nameFilter = action.holidays.concat(nameFilter);
+      for (let i = 0; i < 7; i++) {
+        let dow = (i + 1) % 7;
+        let dowFilter = nameFilter.filter((item) => {
+          let from = new Date(
+            item.start.date == undefined ? item.start.dateTime : item.start.date
+          );
+          let to = new Date(
+            item.end.date == undefined ? item.end.dateTime : item.end.date
+          );
+          let dayPos = startDate.getDay() + i;
+          if (item.end.date == undefined)
+            return dayPos >= from.getDay() && dayPos <= to.getDay();
+          else return dayPos >= from.getDay() && dayPos <= to.getDay() - 1;
+        });
+
+        newSchedule.push(
+          dowFilter.map((item, idx) => {
+            return {
+              dayOfWeek: idx == 0 ? getDayOfWeek2(dow) : "",
+              summary:
+                item.summary.split("-").length > 1
+                  ? item.summary.split("-")[1].trim()
+                  : item.summary,
+              content: item.description,
+            };
+          })
+        );
+        if (dowFilter.length == 0)
+          newSchedule.push([
+            {
+              dayOfWeek: getDayOfWeek2(dow),
+              summary: "",
+              content: "",
+            },
+          ]);
+      }
       return newSchedule;
     default:
       return schedule;
   }
 }
 
+function getDayOfWeek(date) {
+  const week = ["일", "월", "화", "수", "목", "금", "토"];
+  let tempDate = new Date(date);
+  return week[tempDate.getDay()];
+}
+
+function getDayOfWeek2(day) {
+  const week = ["일", "월", "화", "수", "목", "금", "토"];
+  return week[day];
+}
 function getMondayDate(date) {
   var paramDate = new Date(date);
 
   var day = paramDate.getDay();
   var diff = paramDate.getDate() - day + (day == 0 ? -6 : 1);
   var isoStr = new Date(paramDate.setDate(diff)).toISOString().substring(0, 10);
-  return isoStr + "T00:00:00Z";
+  return isoStr;
+}
+
+function getMondayDateTime(date) {
+  return `${getMondayDate(date)}T00:00:00Z`;
 }
 
 function getSundayDate(date) {
@@ -49,16 +109,11 @@ function getSundayDate(date) {
   var diff = paramDate.getDate() - day + (day == 0 ? 0 : 7);
   var isoStr = new Date(paramDate.setDate(diff)).toISOString().substring(0, 10);
 
-  return isoStr + "T23:59:59Z";
+  return isoStr;
 }
 
-function dateTest() {
-  let testDate = new Date();
-  testDate.setDate(new Date().getDate() + 1);
-  let mon = getMondayDate(testDate);
-  let sun = getSundayDate(testDate);
-  console.log(`this week's monday: ${mon}`);
-  console.log(`this week's sunday: ${sun}`);
+function getSundayDateTime(date) {
+  return `${getSundayDate(date)}T23:59:59Z`;
 }
 
 const App = () => {
@@ -66,40 +121,80 @@ const App = () => {
   const [thisWeekSchedule, dispatchThisWeek] = useReducer(scheduleReducer, []);
   const [name, setName] = useState(null);
   const [team, setTeam] = useState(null);
-  const teams = ["연구소", "기술팀"];
-  const names = ["이유택", "김정원", "김태호"];
+  const [thisWeek, setThisWeek] = useState(null);
+  const [lastWeek, setLastWeek] = useState(null);
+  const teams = calendarConfig.filters.teams;
+  const [names, setNames] = useState([]);
   const classes = useStyles();
-  const calendarID = calendarConfig.calendarID;
+  const [calendarID, setCalendarID] = useState("");
   const apiKey = calendarConfig.apiKey;
+  const holidayCalID = calendarConfig.holidayCalID;
+  const [tHolidays, setTHolidays] = useState([]);
+  const [lHolidays, setLHolidays] = useState([]);
 
   const teamChange = (event) => {
-    console.log(event.target.value);
     setTeam(event.target.value);
   };
   const nameChange = (event) => {
-    console.log(event.target.value);
     setName(event.target.value);
-    // getSchedule(thisWeek, lastWeek);
   };
 
   useEffect(() => {
     const today = new Date();
-    const tmon = getMondayDate(today);
-    const tsun = getSundayDate(today);
+    setThisWeek(`${getMondayDate(today)} ~ ${getSundayDate(today)}`);
     const lastWeek = new Date();
     lastWeek.setDate(new Date().getDate() - 7);
-    const lmon = getMondayDate(lastWeek);
-    const lsun = getSundayDate(lastWeek);
-    // dateTest();
-    // updateThisWeek({ mon, sun });
+    setLastWeek(`${getMondayDate(lastWeek)} ~ ${getSundayDate(lastWeek)}`);
+
+    const tmon = getMondayDateTime(today);
+    const tsun = getSundayDateTime(today);
+    const lmon = getMondayDateTime(lastWeek);
+    const lsun = getSundayDateTime(lastWeek);
+
+    fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${holidayCalID}/events?orderBy=startTime&singleEvents=true&timeMax=${tsun}&timeMin=${tmon}&key=${apiKey}`,
+      {
+        method: "GET",
+      }
+    )
+      .then((res) => res.json())
+      .then((data) => setTHolidays(data.items));
+    fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${holidayCalID}/events?orderBy=startTime&singleEvents=true&timeMax=${lsun}&timeMin=${lmon}&key=${apiKey}`,
+      {
+        method: "GET",
+      }
+    )
+      .then((res) => res.json())
+      .then((data) => setLHolidays(data.items));
   }, []);
 
   useEffect(() => {
+    if (team == undefined || team == "") return;
+    switch (team) {
+      case "기술팀":
+        setCalendarID(calendarConfig.filters.calendarID[0]);
+        setNames(calendarConfig.filters.memebers[0]);
+        break;
+      case "연구소":
+        setCalendarID(calendarConfig.filters.calendarID[1]);
+        setNames(calendarConfig.filters.memebers[1]);
+        break;
+      default:
+        break;
+    }
+  }, [team]);
+
+  useEffect(() => {
+    if (name == undefined || name == "") return;
+
     const today = new Date();
-    const tmon = getMondayDate(today);
-    const tsun = getSundayDate(today);
-    console.log(`this mon: ${tmon}, this sun: ${tsun}`);
-    // console.log(`last mon: ${lastWeek.mon}, last sun: ${lastWeek.sun}`);
+    const tmon = getMondayDateTime(today);
+    const tsun = getSundayDateTime(today);
+    const lastWeek = new Date();
+    lastWeek.setDate(new Date().getDate() - 7);
+    const lmon = getMondayDateTime(lastWeek);
+    const lsun = getSundayDateTime(lastWeek);
     fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${calendarID}/events?orderBy=startTime&singleEvents=true&timeMax=${tsun}&timeMin=${tmon}&key=${apiKey}`,
       {
@@ -110,8 +205,29 @@ const App = () => {
       .then((data) =>
         dispatchThisWeek({
           type: "REPLACE",
+          start: tmon,
+          end: tsun,
           schedule: data.items,
           member: name,
+          holidays: tHolidays,
+        })
+      );
+
+    fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${calendarID}/events?orderBy=startTime&singleEvents=true&timeMax=${lsun}&timeMin=${lmon}&key=${apiKey}`,
+      {
+        method: "GET",
+      }
+    )
+      .then((res) => res.json())
+      .then((data) =>
+        dispatchLastWeek({
+          type: "REPLACE",
+          start: lmon,
+          end: lsun,
+          schedule: data.items,
+          member: name,
+          holidays: lHolidays,
         })
       );
   }, [name]);
@@ -119,16 +235,19 @@ const App = () => {
   return (
     <React.Fragment>
       <CssBaseline />
+      <div className={classes.emptySpace20} />
       <div className={classes.title}>주간 업무 일정표</div>
+      <div className={classes.emptySpace20} />
       <ScheduleFilter
         teams={teams}
         names={names}
         teamChange={teamChange}
         nameChange={nameChange}
       />
-      <WeeklyView />
-      <div className={classes.emptySpace} />
-      <WeeklyView />
+      <div className={classes.emptySpace10} />
+      <WeeklyView dateRange={lastWeek} schedule={lastWeekSchedule} />
+      <div className={classes.emptySpace5} />
+      <WeeklyView dateRange={thisWeek} schedule={thisWeekSchedule} />
     </React.Fragment>
   );
 };

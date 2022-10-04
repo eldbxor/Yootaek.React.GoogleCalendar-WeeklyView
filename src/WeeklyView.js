@@ -26,9 +26,7 @@ const useStyles = makeStyles((theme) => ({
 
 const WeeklyView = (data) => {
   const classes = useStyles();
-  const week = ["일", "월", "화", "수", "목", "금", "토"];
   const { dateRange, schedule } = data;
-  //   const dayOfWeek = week[new Date().getDay()];
   return (
     <Container>
       <Paper className={classes.root}>
@@ -43,42 +41,15 @@ const WeeklyView = (data) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            <TableRow>
-              <TableCell>월</TableCell>
-              <TableCell>업무1</TableCell>
-              <TableCell>업무 내용1</TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell></TableCell>
-              <TableCell>업무2</TableCell>
-              <TableCell>업무 내용2</TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell></TableCell>
-              <TableCell>업무2</TableCell>
-              <TableCell>업무 내용2</TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell></TableCell>
-              <TableCell>업무2</TableCell>
-              <TableCell>업무 내용2</TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell></TableCell>
-              <TableCell>업무2</TableCell>
-              <TableCell>업무 내용2</TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell></TableCell>
-              <TableCell>업무2</TableCell>
-              <TableCell>업무 내용2</TableCell>
-              <TableCell></TableCell>
-            </TableRow>
+            {schedule.map((array) =>
+              array.map(({ dayOfWeek, summary, content }, i) => (
+                <TableRow key={Date.now() * Math.random()}>
+                  <TableCell>{dayOfWeek}</TableCell>
+                  <TableCell>{summary}</TableCell>
+                  <TableCell>{content}</TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Paper>
