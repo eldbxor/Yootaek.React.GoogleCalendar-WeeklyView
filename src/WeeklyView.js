@@ -47,6 +47,7 @@ const WeeklyView = (data) => {
                   <TableCell>{dayOfWeek}</TableCell>
                   <TableCell>{summary}</TableCell>
                   <TableCell>{content}</TableCell>
+                  <TableCell></TableCell>
                 </TableRow>
               ))
             )}
