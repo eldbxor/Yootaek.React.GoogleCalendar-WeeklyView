@@ -48,6 +48,7 @@ function scheduleReducer(schedule, action) {
           );
           let dayPos = startDate.getDay() + i;
           if (item.end.date == undefined)
+            // 시간 값이 있을 경우
             return dayPos >= from.getDay() && dayPos <= to.getDay();
           else return dayPos >= from.getDay() && dayPos <= to.getDay() - 1;
         });
@@ -64,6 +65,7 @@ function scheduleReducer(schedule, action) {
             };
           })
         );
+
         if (dowFilter.length == 0)
           newSchedule.push([
             {
@@ -94,7 +96,13 @@ function getMondayDate(date) {
 
   var day = paramDate.getDay();
   var diff = paramDate.getDate() - day + (day == 0 ? -6 : 1);
-  var isoStr = new Date(paramDate.setDate(diff)).toISOString().substring(0, 10);
+
+  var monday = new Date(paramDate.setDate(diff));
+
+  let offset = monday.getTimezoneOffset() * 60000; //ms단위라 60000곱해줌
+  let dateOffset = new Date(monday.getTime() - offset);
+
+  let isoStr = dateOffset.toISOString().substring(0, 10);
   return isoStr;
 }
 
@@ -107,13 +115,22 @@ function getSundayDate(date) {
 
   var day = paramDate.getDay();
   var diff = paramDate.getDate() - day + (day == 0 ? 0 : 7);
-  var isoStr = new Date(paramDate.setDate(diff)).toISOString().substring(0, 10);
 
+  var sunday = new Date(paramDate.setDate(diff));
+
+  let offset = sunday.getTimezoneOffset() * 60000; //ms단위라 60000곱해줌
+  let dateOffset = new Date(sunday.getTime() - offset);
+
+  let isoStr = dateOffset.toISOString().substring(0, 10);
   return isoStr;
 }
 
 function getSundayDateTime(date) {
   return `${getSundayDate(date)}T23:59:59Z`;
+}
+
+function addTimeZoneToDateTimeString(date) {
+  return date.replace("Z", `${encodeURIComponent("+")}0900`);
 }
 
 const App = () => {
@@ -152,7 +169,9 @@ const App = () => {
     const lsun = getSundayDateTime(lastWeek);
 
     fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${holidayCalID}/events?orderBy=startTime&singleEvents=true&timeMax=${tsun}&timeMin=${tmon}&key=${apiKey}`,
+      `https://www.googleapis.com/calendar/v3/calendars/${holidayCalID}/events?orderBy=startTime&singleEvents=true&timeMax=${addTimeZoneToDateTimeString(
+        tsun
+      )}&timeMin=${addTimeZoneToDateTimeString(tmon)}&key=${apiKey}`,
       {
         method: "GET",
       }
@@ -160,7 +179,9 @@ const App = () => {
       .then((res) => res.json())
       .then((data) => setTHolidays(data.items));
     fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${holidayCalID}/events?orderBy=startTime&singleEvents=true&timeMax=${lsun}&timeMin=${lmon}&key=${apiKey}`,
+      `https://www.googleapis.com/calendar/v3/calendars/${holidayCalID}/events?orderBy=startTime&singleEvents=true&timeMax=${addTimeZoneToDateTimeString(
+        lsun
+      )}&timeMin=${addTimeZoneToDateTimeString(lmon)}&key=${apiKey}`,
       {
         method: "GET",
       }
@@ -195,6 +216,7 @@ const App = () => {
     lastWeek.setDate(new Date().getDate() - 7);
     const lmon = getMondayDateTime(lastWeek);
     const lsun = getSundayDateTime(lastWeek);
+
     fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${calendarID}/events?orderBy=startTime&singleEvents=true&timeMax=${tsun}&timeMin=${tmon}&key=${apiKey}`,
       {
