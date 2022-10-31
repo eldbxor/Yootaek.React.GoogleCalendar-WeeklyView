@@ -46,12 +46,23 @@ function scheduleReducer(schedule, action) {
           let to = new Date(
             item.end.date == undefined ? item.end.dateTime : item.end.date
           );
-          let dayPos = startDate.getDate() + i;
+
+          let dateOffset = new Date(
+            startDate.getTime() + i * 24 * 60 * 60 * 1000
+          );
           if (item.end.date == undefined)
             // 시간 값이 있을 경우
-            return dayPos >= from.getDate() && dayPos <= to.getDate();
-          else return dayPos >= from.getDate() && dayPos <= to.getDate() - 1;
+            return (
+              dateOffset.getTime() >= from.getTime() &&
+              dateOffset.getTime() <= to.getTime()
+            );
+          else
+            return (
+              dateOffset.getTime() >= from.getTime() &&
+              dateOffset.getTime() <= to.getTime() - 1
+            );
         });
+        console.log(dowFilter);
 
         newSchedule.push(
           dowFilter.map((item, idx) => {
