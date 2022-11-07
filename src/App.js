@@ -50,6 +50,9 @@ function scheduleReducer(schedule, action) {
           let dateOffset = new Date(
             startDate.getTime() + i * 24 * 60 * 60 * 1000
           );
+
+          if (item.start.date == undefined) from.setHours(0, 0, 0);
+          if (item.end.date == undefined) to.setHours(23, 59, 59);
           if (item.end.date == undefined)
             // 시간 값이 있을 경우
             return (
@@ -62,7 +65,6 @@ function scheduleReducer(schedule, action) {
               dateOffset.getTime() <= to.getTime() - 1
             );
         });
-        console.log(dowFilter);
 
         newSchedule.push(
           dowFilter.map((item, idx) => {
